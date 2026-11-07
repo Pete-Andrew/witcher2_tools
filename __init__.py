@@ -19,7 +19,7 @@ from . import dzip, importer
 bl_info = {
     "name": "Witcher 2 Tools",
     "author": "Witcher 2 Tools contributors",
-    "version": (0, 2, 2),
+    "version": (0, 2, 4),
     "blender": (4, 5, 0),
     "location": "3D Viewport > Sidebar > Witcher 2",
     "description": "Browse and import textured Witcher 2 monsters and characters from your own game files",

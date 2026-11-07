@@ -34,7 +34,7 @@ in a list inside Blender, and import any of them **textured and rigged** with on
 |---|---|
 | **Blender 4.5 or newer** | Tested on Blender 5.2. |
 | **The Witcher 2** | Your own Steam or GOG copy, installed. |
-| **Witcher 3 Tools** add-on | By Dingdio: <https://github.com/dingdio/Witcher3_Blender_Tools>. Witcher 2 Tools uses its Witcher 2 mesh and skeleton readers, so it must be installed and **enabled**. Tested with version 1.0.1. |
+| **Witcher 3 Tools 1.1.0 or newer** | By Dingdio: <https://github.com/dingdio/Witcher3_Blender_Tools/releases>. **Required**: Witcher 2 Tools uses its Witcher 2 mesh and skeleton readers, so it must be installed and **enabled**. Use the official release; version 1.1.0 works on Blender 5.x without changes. Tested with 1.1.0 on Blender 5.2. |
 
 ## Installation
 
@@ -45,8 +45,10 @@ in a list inside Blender, and import any of them **textured and rigged** with on
 3. Click the **⌄** drop-down menu at the top right of that window and choose
    **Install from Disk…**
 4. Select the zip you downloaded and click **Install from Disk**.
-5. Make sure **Witcher 3 Tools** is installed and ticked in **Edit → Preferences →
-   Add-ons** as well.
+5. Install **Witcher 3 Tools** the same way if you don't have it: download its zip from
+   [Dingdio's Releases page](https://github.com/dingdio/Witcher3_Blender_Tools/releases)
+   and use **Install from Disk…** again. Make sure it is ticked in
+   **Edit → Preferences → Add-ons**.
 
 > The green **Code → Download ZIP** button on GitHub also works if you prefer it;
 > Blender accepts that zip too.
@@ -115,7 +117,16 @@ for how well the import lined up:
 | `w2_bind_bones_within_5mm` | Bones within 5 mm of the meshes' bind pose, e.g. `105/105` |
 | `w2_bind_error_mm` | Median bone error in millimetres |
 | `w2_textures_loaded` | Textures found and loaded, e.g. `7/7` |
+| `w2_texture_links_repaired` | Present when textures were re-connected to the shader (see below) |
 | `w2_rest_pose_from_meshes` | Present when the skeleton's stored pose differed from the meshes' and was rebuilt from them (bullvore, troll, endriaga and others) |
+
+### Materials and Witcher 3 Tools 1.1.0
+
+Witcher 3 Tools 1.1.0 builds Witcher 2 materials around a shader group but plugs the
+textures into inputs that group does not use, so models would render white.
+Witcher 2 Tools detects this after each import and re-connects the colour, normal
+and specular textures to the inputs the shader actually reads. Materials that are
+already wired correctly are left untouched.
 
 ## The cache folder
 
@@ -144,6 +155,7 @@ cache folder if you like. Nothing else on your system is changed.
 | An import fails | The exact error is shown at the bottom of Blender and in **Window → Toggle System Console**. Please open an issue with that text and the entry name. |
 | Several meshes overlap | You imported an **(appearance)** entry, which contains every variant. Hide the variants you don't want, or use the **(model)** / **(gameplay)** entry. |
 | Some texture slots are empty | A few materials point at engine placeholder textures that have no image. |
+| Models render white | Switch the viewport to **Material Preview** or **Rendered** (Solid mode shows no textures). If they are still white, check the import message for *Re-connected N texture input(s)* and please open an issue. |
 
 ## Known limitations
 

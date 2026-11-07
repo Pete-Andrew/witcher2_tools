@@ -470,6 +470,90 @@ def _relink_images(objects, data_root):
     return loaded, len(images)
 
 
+_ROLE_INPUTS = {
+    "Diffuse": ("Diffuse", "DiffuseMap", "tex_Diffuse"),
+    "Normal": ("Normal", "NormalBase", "tex_Normalmap"),
+    "SpecularTexture": ("SpecularTexture", "Specular", "tex_Specular"),
+}
+
+
+def _texture_role(socket_name):
+    """Which shader input a Witcher 2 texture parameter belongs to, from its name."""
+    s = socket_name.lower().replace(" ", "").replace("_", "")
+    if "detail" in s or "cube" in s or "mask" in s:
+        return None
+    if "norm" in s:
+        return "Normal"
+    if "spec" in s:
+        return "SpecularTexture"
+    if "diff" in s or "difus" in s or "albedo" in s:   # "difuse" is a typo in the game's own data
+        return "Diffuse"
+    return None
+
+
+def _fix_materials(objects):
+    """Re-route textures that Witcher 3 Tools plugged into unused shader-group inputs.
+
+    Witcher 3 Tools 1.1.0 builds Witcher 2 materials around a shader group whose
+    texture inputs are Diffuse / Normal / SpecularTexture / Alpha, but links the
+    Witcher 2 parameters (diffusemap, normalmap, specular...) to inputs of their
+    own names, which nothing inside the group reads, so models render white.
+    Only re-routes when the original input is unused inside the group and the
+    target input is used and still empty, so correct materials are left alone.
+    Returns the number of links added.
+    """
+    added = 0
+    seen = set()
+    for o in objects:
+        if o.type != "MESH":
+            continue
+        for mat in o.data.materials:
+            if not mat or not mat.node_tree or mat.name in seen:
+                continue
+            seen.add(mat.name)
+            nt = mat.node_tree
+            for gnode in [n for n in nt.nodes if n.bl_idname == "ShaderNodeGroup" and n.node_tree]:
+                used = set()
+                for n in gnode.node_tree.nodes:
+                    if n.bl_idname == "NodeGroupInput":
+                        used.update(s.name for s in n.outputs if s.is_linked)
+                diffuse_image = None
+                for sock in list(gnode.inputs):
+                    if not sock.is_linked or sock.name in used:
+                        continue
+                    link = sock.links[0]
+                    src = link.from_node
+                    if src.bl_idname != "ShaderNodeTexImage":
+                        continue
+                    role = _texture_role(sock.name)
+                    if role is None:
+                        continue
+                    # Shader groups name their inputs differently (an eye shader
+                    # reads Specular and NormalBase, for example).
+                    target = None
+                    for cand in _ROLE_INPUTS[role]:
+                        t = gnode.inputs.get(cand)
+                        if cand in used and t is not None and not t.is_linked:
+                            target = t
+                            break
+                    if target is None:
+                        continue
+                    nt.links.new(src.outputs["Color"], target)
+                    added += 1
+                    if role == "Diffuse":
+                        diffuse_image = src
+                    if role == "Normal":
+                        try:
+                            src.image.colorspace_settings.name = "Non-Color"
+                        except Exception:
+                            pass
+                alpha = gnode.inputs.get("Alpha")
+                if diffuse_image is not None and alpha is not None and "Alpha" in used and not alpha.is_linked:
+                    nt.links.new(diffuse_image.outputs["Alpha"], alpha)
+                    added += 1
+    return added
+
+
 def _layer_collection(layer_coll, coll):
     if layer_coll.collection == coll:
         return layer_coll
@@ -676,6 +760,11 @@ def import_entity(context, dset, ent_key, cache_root, *, materials=True, lods=Fa
         report.append("Textures loaded: %d/%d" % (loaded, total))
         if rig is not None:
             rig["w2_textures_loaded"] = "%d/%d" % (loaded, total)
+        rewired = _fix_materials(mesh_objs)
+        if rewired:
+            report.append("Re-connected %d texture input(s) to the shader" % rewired)
+            if rig is not None:
+                rig["w2_texture_links_repaired"] = rewired
 
     # Imported objects sometimes land outside the active collection; gather them.
     for o in set(mesh_objs) | set(a for a in [rig] if a):

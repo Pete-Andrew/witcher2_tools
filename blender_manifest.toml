@@ -1,11 +1,13 @@
 schema_version = "1.0.0"
 
 id = "witcher2_tools"
-version = "0.2.2"
+version = "0.2.4"
 name = "Witcher 2 Tools"
 tagline = "Browse and import textured Witcher 2 monsters and characters from your own game files"
 maintainer = "Peter Andrew"
 type = "add-on"
+
+website = "https://github.com/Pete-Andrew/witcher2_tools"
 
 tags = ["Import-Export"]
 
